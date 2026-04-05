@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Diário Pessoal</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --bg:#FAF8F5;--surface:#FFFFFF;--surface2:#F2EFE9;--border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.14);
+    --text:#1A1714;--text2:#6B6560;--text3:#9E9893;--accent:#8B6E4E;--accent-light:#EDE5DA;
+    --danger:#C05045;--tag-bg:#EDE5DA;--tag-text:#6B4E2E;--sidebar-w:260px;
+  }
+  @media(prefers-color-scheme:dark){
+    :root{--bg:#1A1714;--surface:#232018;--surface2:#2C2924;--border:rgba(255,255,255,0.08);--border2:rgba(255,255,255,0.14);
+    --text:#F0EDE8;--text2:#9E9893;--text3:#6B6560;--accent:#C4A882;--accent-light:#2C2418;
+    --tag-bg:#2C2418;--tag-text:#C4A882;}
+  }
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+  #app{display:flex;height:100vh;overflow:hidden;}
+  #sidebar{width:var(--sidebar-w);background:var(--surface);border-right:0.5px solid var(--border2);display:flex;flex-direction:column;flex-shrink:0;overflow:hidden;}
+  #sidebar-header{padding:20px 16px 12px;border-bottom:0.5px solid var(--border);}
+  #sidebar-header h1{font-family:'Lora',serif;font-size:20px;font-weight:500;color:var(--text);margin-bottom:12px;}
+  #search-box{display:flex;align-items:center;gap:8px;background:var(--surface2);border-radius:8px;padding:7px 10px;}
+  #search-box input{border:none;background:transparent;font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text);outline:none;width:100%;}
+  #search-box input::placeholder{color:var(--text3);}
+  #sidebar-filters{padding:10px 16px;display:flex;gap:6px;flex-wrap:wrap;border-bottom:0.5px solid var(--border);}
+  .filter-pill{background:var(--surface2);color:var(--text2);font-size:11px;font-weight:500;padding:4px 10px;border-radius:20px;cursor:pointer;border:0.5px solid transparent;transition:all 0.15s;}
+  .filter-pill.active{background:var(--accent-light);color:var(--accent);border-color:var(--accent);}
+  #entries-list{flex:1;overflow-y:auto;padding:8px 0;}
+  #entries-list::-webkit-scrollbar{width:4px;}
+  #entries-list::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+  .entry-item{padding:12px 16px;cursor:pointer;border-left:3px solid transparent;transition:all 0.15s;border-bottom:0.5px solid var(--border);}
+  .entry-item:hover{background:var(--surface2);}
+  .entry-item.active{background:var(--accent-light);border-left-color:var(--accent);}
+  .entry-item-date{font-size:11px;color:var(--text3);font-weight:500;letter-spacing:0.03em;margin-bottom:3px;}
+  .entry-item-title{font-family:'Lora',serif;font-size:14px;color:var(--text);font-weight:500;margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .entry-item-preview{font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .entry-item-footer{display:flex;align-items:center;gap:6px;margin-top:5px;}
+  .mood-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .entry-tags{display:flex;gap:4px;}
+  .tag-chip{font-size:10px;background:var(--tag-bg);color:var(--tag-text);padding:2px 6px;border-radius:4px;font-weight:500;}
+  #sidebar-footer{padding:12px 16px;border-top:0.5px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+  .icon-btn{background:none;border:none;color:var(--text2);cursor:pointer;padding:6px;border-radius:6px;font-size:16px;transition:all 0.15s;display:flex;align-items:center;}
+  .icon-btn:hover{background:var(--surface2);color:var(--text);}
+  #main{flex:1;display:flex;flex-direction:column;overflow:hidden;}
+  .view{display:none;flex:1;flex-direction:column;overflow:hidden;}
+  .view.active{display:flex;}
+  #drive-bar{padding:8px 16px;background:var(--surface2);border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text3);flex-shrink:0;}
+  #drive-status{display:flex;align-items:center;gap:6px;}
+  .drive-dot{width:7px;height:7px;border-radius:50%;background:var(--text3);}
+  .drive-dot.connected{background:#4A7C59;}
+  .drive-dot.saving{background:#C4A882;animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:0.4;}}
+  .btn-primary{background:var(--accent);color:#FFF;border:none;padding:7px 16px;border-radius:8px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:opacity 0.15s;}
+  .btn-primary:hover{opacity:0.85;}
+  .btn-ghost{background:none;color:var(--text2);border:0.5px solid var(--border2);padding:7px 16px;border-radius:8px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;transition:all 0.15s;}
+  .btn-ghost:hover{background:var(--surface2);}
+  .btn-danger{background:none;color:var(--danger);border:0.5px solid var(--danger);padding:7px 16px;border-radius:8px;font-size:13px;font-weight:500;font-family:'DM Sans',sans-serif;cursor:pointer;}
+  .btn-google{display:flex;align-items:center;gap:10px;background:var(--surface);border:0.5px solid var(--border2);padding:12px 24px;border-radius:10px;font-size:14px;font-weight:500;cursor:pointer;color:var(--text);font-family:'DM Sans',sans-serif;transition:all 0.15s;}
+  .btn-google:hover{background:var(--surface2);}
+  #editor-toolbar{padding:14px 32px 12px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0;}
+  .toolbar-sep{width:0.5px;height:20px;background:var(--border2);}
+  #editor-actions{display:flex;gap:8px;margin-left:auto;}
+  #editor-body{flex:1;overflow-y:auto;padding:32px 48px;display:flex;flex-direction:column;gap:16px;}
+  #entry-title-input{font-family:'Lora',serif;font-size:28px;font-weight:500;color:var(--text);border:none;outline:none;background:transparent;width:100%;line-height:1.3;}
+  #entry-title-input::placeholder{color:var(--text3);}
+  #entry-content-input{font-family:'Lora',serif;font-size:16px;color:var(--text);line-height:1.8;border:none;outline:none;background:transparent;width:100%;resize:none;min-height:300px;flex:1;}
+  #entry-content-input::placeholder{color:var(--text3);}
+  #editor-meta{padding:16px 32px 20px;border-top:0.5px solid var(--border);display:flex;gap:24px;align-items:flex-start;background:var(--surface);flex-wrap:wrap;flex-shrink:0;}
+  .meta-section{display:flex;flex-direction:column;gap:8px;}
+  .meta-label{font-size:11px;font-weight:500;color:var(--text3);letter-spacing:0.05em;text-transform:uppercase;}
+  .mood-selector{display:flex;gap:8px;}
+  .mood-option{display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;padding:6px 8px;border-radius:8px;border:0.5px solid transparent;transition:all 0.15s;}
+  .mood-option:hover{background:var(--surface2);}
+  .mood-option.selected{background:var(--accent-light);border-color:var(--accent);}
+  .mood-emoji{font-size:18px;}
+  .mood-label{font-size:10px;color:var(--text3);}
+  .mood-option.selected .mood-label{color:var(--accent);}
+  .weather-selector{display:flex;gap:8px;}
+  .weather-option{cursor:pointer;padding:6px 10px;border-radius:8px;font-size:16px;border:0.5px solid transparent;transition:all 0.15s;}
+  .weather-option:hover{background:var(--surface2);}
+  .weather-option.selected{background:var(--accent-light);border-color:var(--accent);}
+  .tag-input-field{border:0.5px solid var(--border2);background:transparent;padding:4px 10px;border-radius:6px;font-size:12px;font-family:'DM Sans',sans-serif;color:var(--text);outline:none;width:100px;}
+  .tag-input-field::placeholder{color:var(--text3);}
+  #read-view-header{padding:20px 48px 16px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;}
+  #read-view-meta{display:flex;align-items:center;gap:12px;}
+  #read-view-body{flex:1;overflow-y:auto;padding:32px 48px;}
+  #read-view-title{font-family:'Lora',serif;font-size:30px;font-weight:500;color:var(--text);margin-bottom:8px;line-height:1.3;}
+  #read-view-date{font-size:13px;color:var(--text3);margin-bottom:24px;}
+  #read-view-content{font-family:'Lora',serif;font-size:17px;line-height:1.85;color:var(--text);white-space:pre-wrap;}
+  #read-view-footer{padding:16px 48px;border-top:0.5px solid var(--border);flex-shrink:0;}
+  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:32px;}
+  .stat-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:12px;padding:16px 20px;}
+  .stat-card .stat-val{font-family:'Lora',serif;font-size:32px;font-weight:500;color:var(--accent);}
+  .stat-card .stat-lbl{font-size:12px;color:var(--text3);margin-top:2px;}
+  .section-card{background:var(--surface);border:0.5px solid var(--border2);border-radius:12px;padding:20px;margin-bottom:20px;}
+  .section-card h3{font-size:14px;font-weight:500;color:var(--text2);margin-bottom:16px;}
+  .mood-bar-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .mood-bar-track{flex:1;height:8px;background:var(--surface2);border-radius:4px;overflow:hidden;}
+  .mood-bar-fill{height:100%;border-radius:4px;}
+  .heatmap{display:grid;grid-template-columns:repeat(14,1fr);gap:4px;}
+  .heat-cell{aspect-ratio:1;border-radius:3px;background:var(--surface2);}
+  .heat-cell.has-entry{background:var(--accent);opacity:0.7;}
+  .heat-cell.today{outline:2px solid var(--accent);outline-offset:1px;}
+  .photo-strip{display:flex;gap:8px;flex-wrap:wrap;}
+  .photo-thumb{width:64px;height:64px;border-radius:8px;object-fit:cover;border:0.5px solid var(--border2);cursor:pointer;}
+  .photo-add-btn{width:64px;height:64px;border-radius:8px;border:0.5px dashed var(--border2);background:var(--surface2);display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--text3);font-size:22px;transition:all 0.15s;}
+  .photo-add-btn:hover{background:var(--accent-light);color:var(--accent);}
+  #modal-backdrop{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:center;justify-content:center;}
+  #modal-backdrop.open{display:flex;}
+  #modal{background:var(--surface);border-radius:16px;padding:24px 28px;width:360px;border:0.5px solid var(--border2);}
+  #modal h2{font-family:'Lora',serif;font-size:20px;font-weight:500;margin-bottom:8px;color:var(--text);}
+  #modal p{font-size:14px;color:var(--text2);line-height:1.6;margin-bottom:20px;}
+  #modal .modal-actions{display:flex;gap:10px;justify-content:flex-end;}
+  #toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--text);color:var(--surface);padding:10px 20px;border-radius:20px;font-size:13px;font-weight:500;z-index:200;transition:transform 0.3s ease;pointer-events:none;}
+  #toast.show{transform:translateX(-50%) translateY(0);}
+  #entry-date-input{font-family:'DM Sans',sans-serif;font-size:13px;color:var(--text2);border:0.5px solid var(--border2);background:var(--surface2);padding:5px 10px;border-radius:6px;outline:none;}
+  #tags-input-area{display:flex;gap:6px;align-items:center;flex-wrap:wrap;}
+  #photo-upload{display:none;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <div id="sidebar-header">
+      <h1>✦ Diário</h1>
+      <div id="search-box">
+        <span style="color:var(--text3);font-size:14px;">⌕</span>
+        <input type="text" id="search-input" placeholder="Buscar entradas..." oninput="renderList()">
+      </div>
+    </div>
+    <div id="sidebar-filters">
+      <div class="filter-pill active" onclick="setFilter('all',this)">Todas</div>
+      <div class="filter-pill" onclick="setFilter('today',this)">Hoje</div>
+      <div class="filter-pill" onclick="setFilter('week',this)">Semana</div>
+      <div class="filter-pill" onclick="setFilter('month',this)">Mês</div>
+    </div>
+    <div id="entries-list"></div>
+    <div id="sidebar-footer">
+      <button class="icon-btn" title="Estatísticas" onclick="showStats()">📊</button>
+      <button class="icon-btn" title="Importar do Diarium" onclick="document.getElementById('diarium-import').click()">📥</button>
+      <input type="file" id="diarium-import" accept=".docx" style="display:none;" onchange="importDiarium(event)">
+      <button class="icon-btn" title="Nova entrada" onclick="newEntry()" style="color:var(--accent);font-size:22px;">+</button>
+    </div>
+  </div>
+
+  <div id="main">
+    <div id="drive-bar">
+      <div id="drive-status">
+        <div class="drive-dot" id="drive-dot"></div>
+        <span id="drive-status-text">Não conectado ao Drive</span>
+      </div>
+      <button id="drive-btn" class="btn-ghost" style="padding:4px 12px;font-size:11px;" onclick="handleDriveAuth()">Conectar ao Drive</button>
+    </div>
+
+    <div id="view-login" class="view active">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:20px;padding:40px;">
+        <div style="font-size:56px;">📖</div>
+        <div style="font-family:'Lora',serif;font-size:26px;font-weight:500;color:var(--text);">Seu diário pessoal</div>
+        <p style="font-size:14px;color:var(--text2);text-align:center;max-width:320px;line-height:1.7;">Conecte ao Google Drive para salvar suas entradas na nuvem e acessá-las de qualquer lugar.</p>
+        <button class="btn-google" onclick="handleDriveAuth()">
+          <svg width="20" height="20" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+          Entrar com Google
+        </button>
+        <p style="font-size:12px;color:var(--text3);">Seus dados ficam salvos apenas no seu Google Drive pessoal.</p>
+      </div>
+    </div>
+
+    <div id="view-empty" class="view">
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;">
+        <div style="font-size:48px;opacity:0.35;">📖</div>
+        <p style="font-family:'Lora',serif;font-size:18px;color:var(--text2);">Seu diário está esperando</p>
+        <span style="font-size:14px;color:var(--text3);">Selecione uma entrada ou crie uma nova</span>
+        <button class="btn-primary" style="margin-top:8px;" onclick="newEntry()">+ Nova entrada</button>
+      </div>
+    </div>
+
+    <div id="view-editor" class="view">
+      <div id="editor-toolbar">
+        <span id="editor-date-display" style="font-size:13px;color:var(--text3);"></span>
+        <input type="date" id="entry-date-input" onchange="updateEditorDate()">
+        <div class="toolbar-sep"></div>
+        <span id="word-count" style="font-size:11px;color:var(--text3);">0 palavras</span>
+        <div id="editor-actions">
+          <button class="btn-ghost" onclick="cancelEdit()">Cancelar</button>
+          <button class="btn-primary" onclick="saveEntry()">Salvar</button>
+        </div>
+      </div>
+      <div id="editor-body">
+        <textarea id="entry-title-input" placeholder="Título (opcional)" rows="1" oninput="autoResize(this)"></textarea>
+        <textarea id="entry-content-input" placeholder="O que está passando pela sua mente hoje?" oninput="updateWordCount();autoResize(this)"></textarea>
+        <div class="photo-strip" id="photo-strip">
+          <div class="photo-add-btn" onclick="document.getElementById('photo-upload').click()">+</div>
+          <input type="file" id="photo-upload" accept="image/*" multiple onchange="handlePhotos(event)">
+        </div>
+      </div>
+      <div id="editor-meta">
+        <div class="meta-section">
+          <div class="meta-label">Humor</div>
+          <div class="mood-selector">
+            <div class="mood-option" onclick="selectMood('😄',this)"><span class="mood-emoji">😄</span><span class="mood-label">Ótimo</span></div>
+            <div class="mood-option" onclick="selectMood('🙂',this)"><span class="mood-emoji">🙂</span><span class="mood-label">Bem</span></div>
+            <div class="mood-option" onclick="selectMood('😐',this)"><span class="mood-emoji">😐</span><span class="mood-label">Ok</span></div>
+            <div class="mood-option" onclick="selectMood('😔',this)"><span class="mood-emoji">😔</span><span class="mood-label">Mal</span></div>
+            <div class="mood-option" onclick="selectMood('😢',this)"><span class="mood-emoji">😢</span><span class="mood-label">Péssimo</span></div>
+          </div>
+        </div>
+        <div class="meta-section">
+          <div class="meta-label">Clima</div>
+          <div class="weather-selector">
+            <div class="weather-option" onclick="selectWeather('☀️',this)">☀️</div>
+            <div class="weather-option" onclick="selectWeather('⛅',this)">⛅</div>
+            <div class="weather-option" onclick="selectWeather('🌧️',this)">🌧️</div>
+            <div class="weather-option" onclick="selectWeather('⛈️',this)">⛈️</div>
+            <div class="weather-option" onclick="selectWeather('❄️',this)">❄️</div>
+          </div>
+        </div>
+        <div class="meta-section">
+          <div class="meta-label">Tags</div>
+          <div id="tags-input-area">
+            <div id="current-tags"></div>
+            <input type="text" class="tag-input-field" id="tag-input" placeholder="+ tag" onkeydown="addTagOnEnter(event)">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="view-read" class="view">
+      <div id="read-view-header">
+        <div id="read-view-meta">
+          <span id="read-mood" style="font-size:22px;"></span>
+          <span id="read-weather" style="font-size:18px;"></span>
+          <div id="read-tags" style="display:flex;gap:5px;"></div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-ghost" onclick="editCurrentEntry()">Editar</button>
+          <button class="btn-danger" onclick="confirmDelete()">Excluir</button>
+        </div>
+      </div>
+      <div id="read-view-body">
+        <div id="read-view-title"></div>
+        <div id="read-view-date"></div>
+        <div id="read-view-content"></div>
+        <div id="read-photos" class="photo-strip" style="margin-top:24px;"></div>
+      </div>
+      <div id="read-view-footer">
+        <span style="font-size:13px;color:var(--text3);" id="read-word-count"></span>
+      </div>
+    </div>
+
+    <div id="view-stats" class="view" style="overflow-y:auto;">
+      <div id="stats-content" style="padding:32px 48px;"></div>
+    </div>
+  </div>
+</div>
+
+<div id="modal-backdrop">
+  <div id="modal">
+    <h2>Excluir entrada</h2>
+    <p>Tem certeza que deseja excluir esta entrada? Esta ação não pode ser desfeita.</p>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal()">Cancelar</button>
+      <button class="btn-danger" onclick="deleteEntry()">Excluir</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/mammoth@1.6.0/mammoth.browser.min.js"></script>
+<script>
+const CLIENT_ID = '324282693990-vfgba0g0pvd0kh841abn0cj3e3b4kamt.apps.googleusercontent.com';
+const SCOPES = 'https://www.googleapis.com/auth/drive.file';
+const FILE_NAME = 'diario_pessoal.json';
+
+let entries = [], currentEntryId = null, editingEntryId = null;
+let currentMood = null, currentWeather = null, currentTags = [], currentPhotos = [];
+let currentFilter = 'all', driveFileId = null, accessToken = null, tokenClient = null;
+
+const gsiScript = document.createElement('script');
+gsiScript.src = 'https://accounts.google.com/gsi/client';
+gsiScript.onload = () => {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: async (resp) => {
+      if (resp.error) { showToast('Erro: ' + resp.error); return; }
+      accessToken = resp.access_token;
+      setDriveStatus('connected', 'Conectado ao Drive');
+      document.getElementById('drive-btn').textContent = 'Sincronizar';
+      document.getElementById('drive-btn').onclick = loadFromDrive;
+      await loadFromDrive();
+    }
+  });
+};
+document.head.appendChild(gsiScript);
+
+function handleDriveAuth() {
+  if (!tokenClient) { showToast('Aguarde...'); return; }
+  tokenClient.requestAccessToken({ prompt: accessToken ? '' : 'consent' });
+}
+
+function setDriveStatus(type, text) {
+  document.getElementById('drive-dot').className = 'drive-dot' + (type === 'connected' ? ' connected' : type === 'saving' ? ' saving' : '');
+  document.getElementById('drive-status-text').textContent = text;
+}
+
+async function loadFromDrive() {
+  if (!accessToken) return;
+  setDriveStatus('saving', 'Carregando...');
+  try {
+    const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${FILE_NAME}'+and+trashed=false&spaces=drive&fields=files(id,name)`, { headers: { Authorization: `Bearer ${accessToken}` } });
+    const data = await res.json();
+    if (data.files && data.files.length > 0) {
+      driveFileId = data.files[0].id;
+      const fileRes = await fetch(`https://www.googleapis.com/drive/v3/files/${driveFileId}?alt=media`, { headers: { Authorization: `Bearer ${accessToken}` } });
+      const json = await fileRes.json();
+      entries = json.entries || [];
+      showToast('Diário carregado ✓');
+    } else {
+      entries = [];
+      showToast('Diário novo criado no Drive');
+    }
+    setDriveStatus('connected', 'Sincronizado com Drive');
+    showView('view-empty');
+    renderList();
+  } catch(e) {
+    setDriveStatus('', 'Erro ao carregar');
+    showToast('Erro ao carregar do Drive');
+  }
+}
+
+async function saveToDrive() {
+  if (!accessToken) { showToast('Conecte ao Drive para salvar'); return; }
+  setDriveStatus('saving', 'Salvando...');
+  const payload = JSON.stringify({ entries }, null, 2);
+  try {
+    if (driveFileId) {
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+        method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: payload
+      });
+    } else {
+      const metaRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+        method: 'POST', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: FILE_NAME, mimeType: 'application/json' })
+      });
+      driveFileId = (await metaRes.json()).id;
+      await fetch(`https://www.googleapis.com/upload/drive/v3/files/${driveFileId}?uploadType=media`, {
+        method: 'PATCH', headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' }, body: payload
+      });
+    }
+    setDriveStatus('connected', 'Salvo no Drive ✓');
+  } catch(e) {
+    setDriveStatus('', 'Erro ao salvar');
+    showToast('Erro ao salvar no Drive');
+  }
+}
+
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2); }
+function formatDate(ds) { const [y,m,d]=ds.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}); }
+function shortDate(ds) { const [y,m,d]=ds.split('-').map(Number); return new Date(y,m-1,d).toLocaleDateString('pt-BR',{day:'numeric',month:'short'}); }
+function moodColor(m) { return {'😄':'#4A7C59','🙂':'#8B6E4E','😐':'#888','😔':'#B07850','😢':'#C05045'}[m]||'#888'; }
+function wordCount(t) { return t ? t.trim().split(/\s+/).filter(w=>w.length>0).length : 0; }
+
+function getFiltered() {
+  const q = document.getElementById('search-input').value.toLowerCase();
+  const today = new Date().toISOString().split('T')[0];
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate()-7);
+  const monthAgo = new Date(); monthAgo.setDate(monthAgo.getDate()-30);
+  let f = [...entries].sort((a,b)=>b.date.localeCompare(a.date));
+  if (currentFilter==='today') f=f.filter(e=>e.date===today);
+  else if (currentFilter==='week') f=f.filter(e=>new Date(e.date)>=weekAgo);
+  else if (currentFilter==='month') f=f.filter(e=>new Date(e.date)>=monthAgo);
+  if (q) f=f.filter(e=>(e.title||'').toLowerCase().includes(q)||(e.content||'').toLowerCase().includes(q)||(e.tags||[]).some(t=>t.toLowerCase().includes(q)));
+  return f;
+}
+
+function setFilter(f,el) { currentFilter=f; document.querySelectorAll('.filter-pill').forEach(p=>p.classList.remove('active')); el.classList.add('active'); renderList(); }
+
+function renderList() {
+  const list = document.getElementById('entries-list');
+  const f = getFiltered();
+  if (!f.length) { list.innerHTML='<div style="padding:24px 16px;text-align:center;color:var(--text3);font-size:13px;">Nenhuma entrada encontrada</div>'; return; }
+  list.innerHTML = f.map(e => {
+    const preview=(e.content||'').replace(/\n/g,' ').slice(0,60);
+    const tagsHtml=(e.tags||[]).slice(0,2).map(t=>`<span class="tag-chip">${t}</span>`).join('');
+    return `<div class="entry-item ${e.id===currentEntryId?'active':''}" onclick="openEntry('${e.id}')">
+      <div class="entry-item-date">${shortDate(e.date)}</div>
+      <div class="entry-item-title">${e.title||'Sem título'}</div>
+      <div class="entry-item-preview">${preview||'...'}</div>
+      <div class="entry-item-footer">${e.mood?`<span class="mood-dot" style="background:${moodColor(e.mood)}"></span>`:''}<div class="entry-tags">${tagsHtml}</div></div>
+    </div>`;
+  }).join('');
+}
+
+function openEntry(id) {
+  currentEntryId=id; const e=entries.find(x=>x.id===id); if(!e) return;
+  document.getElementById('read-view-title').textContent=e.title||'Sem título';
+  document.getElementById('read-view-date').textContent=formatDate(e.date);
+  document.getElementById('read-view-content').textContent=e.content||'';
+  document.getElementById('read-mood').textContent=e.mood||'';
+  document.getElementById('read-weather').textContent=e.weather||'';
+  document.getElementById('read-word-count').textContent=`${wordCount(e.content||'')} palavras`;
+  document.getElementById('read-tags').innerHTML=(e.tags||[]).map(t=>`<span class="tag-chip">${t}</span>`).join('');
+  document.getElementById('read-photos').innerHTML=(e.photos||[]).map(p=>`<img class="photo-thumb" src="${p}">`).join('');
+  showView('view-read'); renderList();
+}
+
+function newEntry() {
+  editingEntryId=null; currentMood=null; currentWeather=null; currentTags=[]; currentPhotos=[];
+  const today=new Date().toISOString().split('T')[0];
+  document.getElementById('entry-date-input').value=today;
+  document.getElementById('entry-title-input').value='';
+  document.getElementById('entry-content-input').value='';
+  document.getElementById('editor-date-display').textContent=formatDate(today);
+  document.querySelectorAll('.mood-option,.weather-option').forEach(o=>o.classList.remove('selected'));
+  renderCurrentTags(); renderCurrentPhotos(); updateWordCount();
+  showView('view-editor');
+  setTimeout(()=>document.getElementById('entry-content-input').focus(),50);
+}
+
+function editCurrentEntry() {
+  const e=entries.find(x=>x.id===currentEntryId); if(!e) return;
+  editingEntryId=currentEntryId; currentMood=e.mood||null; currentWeather=e.weather||null;
+  currentTags=[...(e.tags||[])]; currentPhotos=[...(e.photos||[])];
+  document.getElementById('entry-date-input').value=e.date;
+  document.getElementById('entry-title-input').value=e.title||'';
+  document.getElementById('entry-content-input').value=e.content||'';
+  document.getElementById('editor-date-display').textContent=formatDate(e.date);
+  document.querySelectorAll('.mood-option').forEach(o=>{o.classList.remove('selected');if(o.querySelector('.mood-emoji').textContent===currentMood)o.classList.add('selected');});
+  document.querySelectorAll('.weather-option').forEach(o=>{o.classList.remove('selected');if(o.textContent===currentWeather)o.classList.add('selected');});
+  renderCurrentTags(); renderCurrentPhotos(); updateWordCount(); showView('view-editor');
+}
+
+function cancelEdit() { currentEntryId?openEntry(currentEntryId):showView('view-empty'); }
+
+async function saveEntry() {
+  const title=document.getElementById('entry-title-input').value.trim();
+  const content=document.getElementById('entry-content-input').value.trim();
+  const date=document.getElementById('entry-date-input').value;
+  if(!content&&!title){showToast('Escreva algo antes de salvar');return;}
+  if(editingEntryId){
+    const idx=entries.findIndex(e=>e.id===editingEntryId);
+    if(idx>-1){entries[idx]={...entries[idx],title,content,date,mood:currentMood,weather:currentWeather,tags:currentTags,photos:currentPhotos};currentEntryId=editingEntryId;}
+  } else {
+    const entry={id:uid(),date,title,content,mood:currentMood,weather:currentWeather,tags:currentTags,photos:currentPhotos};
+    entries.push(entry); currentEntryId=entry.id;
+  }
+  await saveToDrive(); renderList(); openEntry(currentEntryId); showToast('Entrada salva ✓');
+}
+
+function confirmDelete(){document.getElementById('modal-backdrop').classList.add('open');}
+function closeModal(){document.getElementById('modal-backdrop').classList.remove('open');}
+async function deleteEntry(){entries=entries.filter(e=>e.id!==currentEntryId);currentEntryId=null;await saveToDrive();renderList();closeModal();showView('view-empty');showToast('Entrada excluída');}
+
+function showView(id){document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));document.getElementById(id).classList.add('active');}
+
+function showStats() {
+  currentEntryId=null; renderList();
+  const total=entries.length, totalWords=entries.reduce((s,e)=>s+wordCount(e.content||''),0), streak=calcStreak();
+  const moodCounts={}; entries.forEach(e=>{if(e.mood)moodCounts[e.mood]=(moodCounts[e.mood]||0)+1;});
+  const moods=[{e:'😄',c:'#4A7C59'},{e:'🙂',c:'#8B6E4E'},{e:'😐',c:'#888'},{e:'😔',c:'#B07850'},{e:'😢',c:'#C05045'}];
+  const maxMood=Math.max(1,...Object.values(moodCounts));
+  document.getElementById('stats-content').innerHTML=`
+    <div style="font-family:'Lora',serif;font-size:24px;font-weight:500;margin-bottom:24px;color:var(--text);">Suas estatísticas</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="stat-val">${total}</div><div class="stat-lbl">entradas totais</div></div>
+      <div class="stat-card"><div class="stat-val">${totalWords.toLocaleString('pt-BR')}</div><div class="stat-lbl">palavras escritas</div></div>
+      <div class="stat-card"><div class="stat-val">${streak}</div><div class="stat-lbl">dias seguidos</div></div>
+    </div>
+    <div class="section-card"><h3>Distribuição de humor</h3>
+      ${moods.map(m=>`<div class="mood-bar-row"><span style="font-size:16px;width:24px;text-align:center;">${m.e}</span><div class="mood-bar-track"><div class="mood-bar-fill" style="width:${Math.round((moodCounts[m.e]||0)/maxMood*100)}%;background:${m.c}"></div></div><span style="font-size:12px;color:var(--text3);width:20px;text-align:right;">${moodCounts[m.e]||0}</span></div>`).join('')}
+    </div>
+    <div class="section-card"><h3>Últimos 28 dias</h3><div class="heatmap">${buildHeatmap()}</div></div>`;
+  showView('view-stats');
+}
+
+function buildHeatmap() {
+  const today=new Date(), dates=new Set(entries.map(e=>e.date)), cells=[];
+  for(let i=27;i>=0;i--){const d=new Date(today);d.setDate(d.getDate()-i);const ds=d.toISOString().split('T')[0];cells.push(`<div class="heat-cell ${dates.has(ds)?'has-entry':''} ${i===0?'today':''}" title="${ds}"></div>`);}
+  return cells.join('');
+}
+
+function calcStreak() {
+  if(!entries.length)return 0;
+  const dates=[...new Set(entries.map(e=>e.date))].sort().reverse();
+  let streak=0,check=new Date();
+  for(let i=0;i<365;i++){const ds=check.toISOString().split('T')[0];if(dates.includes(ds)){streak++;check.setDate(check.getDate()-1);}else break;}
+  return streak;
+}
+
+function updateWordCount(){document.getElementById('word-count').textContent=`${wordCount(document.getElementById('entry-content-input').value)} palavras`;}
+function updateEditorDate(){const d=document.getElementById('entry-date-input').value;if(d)document.getElementById('editor-date-display').textContent=formatDate(d);}
+function selectMood(emoji,el){currentMood=emoji;document.querySelectorAll('.mood-option').forEach(o=>o.classList.remove('selected'));el.classList.add('selected');}
+function selectWeather(emoji,el){currentWeather=emoji;document.querySelectorAll('.weather-option').forEach(o=>o.classList.remove('selected'));el.classList.add('selected');}
+function addTagOnEnter(e){if(e.key==='Enter'||e.key===','){e.preventDefault();const v=e.target.value.trim().replace(',','');if(v&&!currentTags.includes(v)){currentTags.push(v);renderCurrentTags();}e.target.value='';}}
+function removeTag(t){currentTags=currentTags.filter(x=>x!==t);renderCurrentTags();}
+function renderCurrentTags(){document.getElementById('current-tags').innerHTML=currentTags.map(t=>`<span class="tag-chip" style="cursor:pointer;" onclick="removeTag('${t}')">${t} ×</span>`).join('');}
+function handlePhotos(event){Array.from(event.target.files).forEach(file=>{const r=new FileReader();r.onload=e=>{currentPhotos.push(e.target.result);renderCurrentPhotos();};r.readAsDataURL(file);});event.target.value='';}
+function renderCurrentPhotos(){document.getElementById('photo-strip').innerHTML=currentPhotos.map((p,i)=>`<img class="photo-thumb" src="${p}" onclick="removePhoto(${i})" title="Clique para remover">`).join('')+`<div class="photo-add-btn" onclick="document.getElementById('photo-upload').click()">+</div><input type="file" id="photo-upload" accept="image/*" multiple onchange="handlePhotos(event)">`;}
+function removePhoto(i){currentPhotos.splice(i,1);renderCurrentPhotos();}
+function autoResize(el){el.style.height='auto';el.style.height=el.scrollHeight+'px';}
+function showToast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2500);}
+
+async function importDiarium(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';
+  showToast('Lendo arquivo...');
+  try {
+    const arrayBuffer = await file.arrayBuffer();
+    const result = await mammoth.extractRawText({ arrayBuffer });
+    const text = result.value;
+    const imported = parseDiarium(text);
+    if (!imported.length) { showToast('Nenhuma entrada encontrada'); return; }
+    // Merge: avoid duplicates by date+content fingerprint
+    const existing = new Set(entries.map(e => e.date + '|' + (e.content||'').slice(0,80)));
+    let added = 0;
+    for (const e of imported) {
+      const key = e.date + '|' + (e.content||'').slice(0,80);
+      if (!existing.has(key)) { entries.push(e); existing.add(key); added++; }
+    }
+    await saveToDrive();
+    renderList();
+    showToast(`${added} entradas importadas do Diarium ✓`);
+    showView('view-empty');
+  } catch(err) {
+    console.error(err);
+    showToast('Erro ao importar arquivo');
+  }
+}
+
+function parseDiarium(text) {
+  const months = { 'janeiro':1,'fevereiro':2,'março':3,'abril':4,'maio':5,'junho':6,'julho':7,'agosto':8,'setembro':9,'outubro':10,'novembro':11,'dezembro':12 };
+  const lines = text.split('\n');
+  const entries_out = [];
+  const dayHeaderRe = /^(segunda-feira|terça-feira|quarta-feira|quinta-feira|sexta-feira|sábado|domingo),\s+(\d+)\s+de\s+(\w+)\s+de\s+(\d{4})$/i;
+  const timestampRe = /^(\d+)\s+de\s+(\w+)\s+de\s+(\d{4})\s+(segunda|terça|quarta|quinta|sexta|sábado|domingo)/i;
+
+  let i = 0;
+  while (i < lines.length) {
+    const line = lines[i].trim();
+    // Match day header like "sexta-feira, 23 de junho de 2017"
+    const hm = line.match(dayHeaderRe);
+    if (hm) {
+      const day = parseInt(hm[2]);
+      const month = months[hm[3].toLowerCase()];
+      const year = parseInt(hm[4]);
+      if (!month) { i++; continue; }
+      const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+      i++;
+      // Skip optional timestamp line(s)
+      while (i < lines.length && lines[i].trim().match(timestampRe)) i++;
+      // Collect content lines
+      const contentLines = [];
+      let tags = [], weather = null, classification = null;
+      while (i < lines.length) {
+        const l = lines[i].trim();
+        // Stop at next day header
+        if (l.match(dayHeaderRe)) break;
+        // Parse metadata
+        if (l.startsWith('Etiquetas:')) {
+          const raw = l.replace('Etiquetas:','').replace(/\\/g,'').trim();
+          tags = raw.split(',').map(t=>t.trim()).filter(t=>t && t!=='Evernote');
+        } else if (l.startsWith('Clima:')) {
+          const raw = l.replace('Clima:','').replace(/\\/g,'').trim();
+          // Try to extract temperature for weather emoji
+          const temp = parseInt(raw);
+          if (!isNaN(temp)) {
+            if (temp >= 28) weather = '☀️';
+            else if (temp >= 20) weather = '⛅';
+            else if (temp >= 10) weather = '🌧️';
+            else weather = '❄️';
+          }
+        } else if (l.startsWith('Classificação:')) {
+          const stars = (l.match(/★/g)||[]).length;
+          if (stars >= 5) classification = '😄';
+          else if (stars >= 4) classification = '🙂';
+          else if (stars >= 3) classification = '😐';
+          else if (stars >= 2) classification = '😔';
+          else classification = '😢';
+        } else if (
+          l.startsWith('Fase lunar:') ||
+          l.startsWith('Localização:') ||
+          l.startsWith('Amanhecer:') ||
+          l.startsWith('☀️ Amanhecer:') ||
+          l.startsWith('Monitor:')
+        ) {
+          // skip metadata we don't use
+        } else if (l) {
+          contentLines.push(l);
+        }
+        i++;
+      }
+      const content = contentLines.join('\n').trim();
+      if (content) {
+        entries_out.push({
+          id: uid(),
+          date: dateStr,
+          title: '',
+          content,
+          mood: classification,
+          weather,
+          tags,
+          photos: []
+        });
+      }
+      continue;
+    }
+    i++;
+  }
+  // Deduplicate entries on same date with same content (Diarium exports duplicates)
+  const seen = new Set();
+  return entries_out.filter(e => {
+    const key = e.date + '|' + e.content.slice(0,100);
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+}
+</script>
+</body>
+</html>
